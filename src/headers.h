@@ -10,9 +10,26 @@
 #include <locale>
 #include <vector>
 
+using namespace std;
 
 
 // GLOBAL VARS
-std::map<int,std::string> joinType;
-std::vector<std::pair<std::string,std::string>> Tables;
-std::vector<std::string> Fields;
+
+struct field 
+{
+	string Table;
+	string TableAlias;
+	string Name;
+	string Alias;
+	string Type;
+	int lenght;
+	int decimal;
+};
+
+
+map<int,string> joinType;
+vector<pair<string,string>> Tables;	// Pair Table - Alias
+//vector<pair<string,string>> Fields; // Pair Field - Alias
+vector<field> Fields; // Pair Field - Alias
+vector<pair<int,int>> Association; // Pair Field Index - Table Index
+
