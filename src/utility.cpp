@@ -36,3 +36,22 @@ vector<string> split(const string &s, char delim) {
     split(s, delim, back_inserter(elems));
     return elems;
 }
+
+vector<string> split(const string &s, const string &del){
+    vector<string> elems;
+    string s2 = s;
+    string del2 = del;
+    int pos = 0;
+    int start = 0;
+
+    transform(s2.begin(), s2.end(),s2.begin(), ::toupper);
+    transform(del2.begin(), del2.end(),del2.begin(), ::toupper);
+
+    while(pos >= 0)
+    {
+        pos = s2.find(del2, start);
+        elems.push_back(s.substr(start, pos-start));
+        start = pos + del2.size();
+    }
+    return elems;
+}

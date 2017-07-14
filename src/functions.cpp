@@ -101,10 +101,8 @@ void getTables(string query){
 	
 	while (start > 0)
 	{
-		//cout << "start: "  << start << " size: "  << fromString.size()  << " len: "   << fromString.size()-start << endl;
 		fromString = fromString.substr(start, fromString.size()-start);
 		end = FindPATTERN(fromString, " on ");
-		//cout << "start: "  << start  <<  " size: "  << fromString.size() << " len: "   << end-1  << " str: "   << fromString << endl;
 		v.empty();
 		v = split(fromString.substr(1, end-1), ' ');
 		Tables.push_back(pair<string, string>(trim(v.at(0)), trim(v.at(1))));
@@ -115,6 +113,22 @@ void getTables(string query){
 
 /**
  * Find the next comme in a select statement
+ *
+ * @param selectString String with select statement.
+ * @return position of the first comma not included in parenthesis.
+ */
+int findNextAND_OR(string str){
+	int And = FindPATTERN(str, " AND ");
+	int Or = FindPATTERN(str, " OR ");
+	if (And == -1 && Or == -1)	return -1;
+	if (And == -1)				return Or+4;
+	if (Or == -1)				return And+4;
+	return min(And+5, Or+4);
+}
+
+
+/**
+ * Find the next comma in a select statement
  *
  * @param selectString String with select statement.
  * @return position of the first comma not included in parenthesis.
@@ -175,7 +189,7 @@ string resolveAssociations(string alias){
  * @param query String with the SQL query.
  */
 void getFields(string query){
-	// remove SELECT statement fron string
+	// Remove SELECT statement fron string
 	int start = FindSELECT(query) + 7;
 	int end = FindFROM(query);
 
@@ -187,14 +201,16 @@ void getFields(string query){
 	stmt = query.substr(start, end-start);
 	int pos = 0;
 
+	// Extract fields
 	while(pos >= 0)
 	{
-    	pos = findNextComma(stmt.substr(0,-1));
+    	pos = findNextComma(stmt);
     	tmp = stmt.substr(0, pos);
     	v.push_back(trim(tmp));
-    	stmt = stmt.substr(pos+1, -1);
+    	stmt = stmt.substr((pos >= 0 ? pos : 0)+1, -1);
 	}
 
+	// Parse fields to extract alias and table
 	for (int i = 0; i < v.size(); ++i)
 	{
 		field currField;
@@ -209,7 +225,6 @@ void getFields(string query){
 		int aliasPos = FindPATTERN(v[i], " AS ");
 		if(aliasPos == -1)
 		{
-			//Fields.push_back(pair<string, string>(v[i], ""));
 			int pPos = v[i].find(".");
 			_alias = "";
 			_name = v[i].substr(pPos+1, -1);
@@ -217,12 +232,14 @@ void getFields(string query){
 		}
 		else
 		{
-			//Fields.push_back(pair<string, string>(v[i].substr(0, aliasPos), v[i].substr(aliasPos+4, v[i].size()-4)));
 			int pPos = v[i].find(".");
 			_alias = v[i].substr(aliasPos+4, v[i].size()-4);
 			_name = v[i].substr(pPos+1, aliasPos - v[i].find("."));
 			_tableAlias = pPos == -1 ? "" : v[i].substr(0, pPos);
 		}
+
+		// TO-DO : extract type and lenght from DB
+
 		currField.Name = trim(_name);
 		currField.Alias = trim(_alias);
 		currField.TableAlias = trim(_tableAlias);
@@ -232,3 +249,44 @@ void getFields(string query){
 
 }
 
+
+void getFilters(string query){
+	int start = FindWHERE(query);
+	int end  = FindGROUPBY(query);
+	int end2  = FindORDERBY(query);
+	string stmt;
+	string tmp;
+	vector<string> v;
+
+	// If there is no WHERE then exit
+	if(start == -1)
+		return;
+
+	// Shift start posizion after WHERE string
+	start += 6;
+
+	stmt = query.substr(start, (end != -1 ? end : (end2 != -1 ? end2 : query.size()))-start);
+	int pos = 0;
+
+	// Extract filters
+	while(pos >= 0)
+	{
+    	pos = findNextAND_OR(stmt);
+    	tmp = stmt.substr(0, pos);
+    	v.push_back(trim(tmp));
+   		stmt = stmt.substr(pos >= 0 ? pos : 0, -1);
+    	cout << trim(tmp) << endl;
+	}
+
+	// Parse filters to extract struct data
+	for (int i = 0; i < v.size(); ++i)
+	{
+		vector<string> v2;
+		//for (int j = 0; j < Criteria.size() && v2.size() == 0; ++j)
+		//{
+			v2 = split(v[i], "Criteria[0]");
+		//}
+		//cout << v2[0] << "\t" << v2[1] << endl;
+	}
+	return;
+}

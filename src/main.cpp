@@ -7,8 +7,10 @@
  * Add SQLAPI++ and connect to database
  * Add query to recover fields's type and length
  * Parse WHERE condition
+ * Parse JOINS
  * Parse GROUP BY condition
  * Parse ORDER BY condition
+ * Flags controls
  * Error handling
  * Write on file
  **/
@@ -37,14 +39,39 @@ int main(int argc, char **args)
 
 	getTables(query);
 
+	cout << endl << "TABLE LIST" << endl << "----------------------------" << endl;
 	for (const auto& p : Tables)
-  		cout << p.first << ", \t" << p.second << endl;
+  		cout << "Table: " << setw(18) << left << p.first
+  			 << "Alias: " << setw(15) << left << p.second << endl;
 
   	getFields(query);
 
-  	cout << endl;
+	cout << endl << "FIELD LIST" << endl << "----------------------------" << endl;
   	for (int i = 0; i < Fields.size(); ++i)
-  		cout << "Name:" << Fields[i].Name << ", \tAlias:" << Fields[i].Alias << ", \tTable:" << Fields[i].Table << ", \tTableAlias:" << Fields[i].TableAlias << endl;
+  		cout << "Name: "  << setw(15) << left << Fields[i].Name 
+  			 << "Alias: " << setw(15) << left << Fields[i].Alias 
+  			 << "Table: " << setw(18) << left << Fields[i].Table 
+  			 << "TableAlias: " << setw(15) << left << Fields[i].TableAlias << endl;
 
+  	cout << endl;
+  	getFilters(query);
+
+
+
+/*
+  	SAConnection dbConn;
+
+  	try
+  	{
+  		dbConn.Connect("localhost\\SQL2014@x_infinity_demo24", "", "", SA_SQLServer_Client);
+  		cout << "We're connected! <3" << endl;
+  		dbConn.Disconnect();
+  		cout << "We're disconnected! :(" << endl;
+  	}
+  	catch(SAException &e)
+  	{
+  		printf("%s\n", (const char*)e.ErrText());
+  	}
+*/
 	return 0;
 }
