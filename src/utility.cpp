@@ -20,6 +20,16 @@ static inline string &trim(string &s) {
     return ltrim(rtrim(s));
 }
 
+inline bool isInteger(const std::string & s)
+{
+   if(s.empty() || ((!isdigit(s[0])) && (s[0] != '-') && (s[0] != '+'))) return false ;
+
+   char * p ;
+   strtol(s.c_str(), &p, 10) ;
+
+   return (*p == 0) ;
+}
+
 // String split on delimiter
 template<typename Out>
 void split(const string &s, char delim, Out result) {
@@ -55,3 +65,5 @@ vector<string> split(const string &s, const string &del){
     }
     return elems;
 }
+
+

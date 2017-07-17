@@ -33,6 +33,7 @@ struct filter
 	string Table;
 	string TableAlias;
 	string Name;
+	string Value;
 	string Criteria;
 	string ConcatExp;
 	bool Not;
@@ -41,8 +42,10 @@ struct filter
 
 
 map<int,string> joinType;
-vector<field> Fields;   // Vector of fields
-vector<filter> Filters; // Vector of filters
-vector<pair<string,string>> Tables;	// Pair Table - Alias
-vector<pair<int,int>> Association;  // Pair Field Index - Table Index
-vector<string> Criteria = {"<>", " like ", ">=", "<=", "<", ">", "=", " in "};
+vector<field> 	Fields;   				// Vector of fields
+vector<filter> 	Filters; 				// Vector of filters
+vector<string> 	GroupBy;				// Vector of groups
+vector<pair<string,string>> Tables;		// Pair Table - Alias
+vector<pair<string,string>> OrderBy;	// Pair Field - Direction
+//vector<pair<int,int>> Association;  	// Pair Field Index - Table Index
+vector<string> Criteria = {"<>", " like ", ">=", "<=", "<", ">", "=", " in ", " is null ", " is not null "};	// Symbols used in filter statements

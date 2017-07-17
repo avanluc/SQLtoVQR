@@ -6,13 +6,18 @@
  * get database connection string
  * Add SQLAPI++ and connect to database
  * Add query to recover fields's type and length
- * Parse WHERE condition
  * Parse JOINS
  * Parse GROUP BY condition
- * Parse ORDER BY condition
  * Flags controls
  * Error handling
  * Write on file
+ *
+ * DONE
+ *---------------------------
+ * Add case for TABLES without alias
+ * Parse WHERE condition
+ * Comments handling (remove segment of code between comments before parsing)
+ * Parse ORDER BY condition
  **/
 
 
@@ -54,8 +59,35 @@ int main(int argc, char **args)
   			 << "TableAlias: " << setw(15) << left << Fields[i].TableAlias << endl;
 
   	cout << endl;
+
   	getFilters(query);
 
+  	cout << endl << "FILTER LIST" << endl << "----------------------------" << endl;
+  	for (int i = 0; i < Filters.size(); ++i)
+  		cout << "Name: "  << setw(15) << left << Filters[i].Name 
+  			 << "Criteria: " << setw(10) << left << Filters[i].Criteria
+  			 << "Value: " << setw(15) << left << Filters[i].Value
+  			 << "Table: " << setw(18) << left << Filters[i].Table
+  			 << "TableAlias: " << setw(15) << left << Filters[i].TableAlias << endl;
+
+  	cout << endl;
+
+  	getGroupBy(query);
+
+	cout << endl << "GROUP BY LIST" << endl << "----------------------------" << endl;
+  	for (int i = 0; i < GroupBy.size(); ++i)
+  		cout << "Field: "  << setw(15) << left << GroupBy[i] << endl;
+
+  	cout << endl;
+
+  	getOrderBy(query);
+
+	cout << endl << "ORDER BY LIST" << endl << "----------------------------" << endl;
+  	for (int i = 0; i < OrderBy.size(); ++i)
+  		cout << "Field: "  << setw(15) << left << OrderBy[i].first 
+  			 << "Direction: " << setw(10) << left << OrderBy[i].second << endl;
+
+  	cout << endl;
 
 
 /*

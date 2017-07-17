@@ -94,7 +94,7 @@ void getTables(string query){
 		table = fromString.substr(5, start);
 
 	v = split(table, ' ');
-	Tables.push_back(pair<string, string>(v.at(0), v.at(1)));
+	Tables.push_back(pair<string, string>(v[0], (v.size()>1 ? v[1] : "")));
 	
 	// update start position and searched string
 	start = FindFirstJOIN(fromString, true);
@@ -105,7 +105,8 @@ void getTables(string query){
 		end = FindPATTERN(fromString, " on ");
 		v.empty();
 		v = split(fromString.substr(1, end-1), ' ');
-		Tables.push_back(pair<string, string>(trim(v.at(0)), trim(v.at(1))));
+		string tmp = (v.size()>1 ? v[1] : "");
+		Tables.push_back(pair<string, string>(trim(v[0]), trim(tmp)));
 		start = FindFirstJOIN(fromString, true);
 	}
 }
@@ -146,6 +147,35 @@ int findNextComma(string selectString){
 
 
 /**
+ * Remove comment from code
+ *
+ * @param query String with the query.
+ * @param mode if 0 remove block comments, else remove line comments.
+ * @return query statement clean from comments.
+ */
+string removeComments(string query, int mode){
+	int start = 0;
+	int end = 0;
+
+	if (mode == 0)
+	{
+		while((start = query.find("/*")) >= 0)
+		{
+			end = query.find("*/", start) + 2;
+			query.erase(start, end-start);
+		}
+	}
+	else
+	{
+		int start = 0;
+		if((start =  query.find("--")) >= 0)
+			query.erase(start, -1);
+	}
+	return query;
+}
+
+
+/**
  * Read the SQL query from file
  *
  * @param file String with the file path.
@@ -163,10 +193,10 @@ string readQuery(string name){
 
 	file.open(name);
 	while (getline(file, line))
-		query += trim(line) + " ";
+		query += removeComments(trim(line), 1) + " ";
 	file.close();
 
-	return query;
+	return removeComments(query, 0);
 }
 
 /**
@@ -178,13 +208,13 @@ string readQuery(string name){
 string resolveAssociations(string alias){
 
 	for (int i = 0; i < Tables.size(); ++i)
-		if(alias.compare(Tables[i].second) == 0 )
+		if(alias.compare(Tables[i].first) == 0 || alias.compare(Tables[i].second) == 0)
 			return Tables[i].first;
 	return "";
 }
 
 /**
- * Fill the Fields vector with the pair field, alias
+ * Fill the Fields vector with the info in the field struct data
  *
  * @param query String with the SQL query.
  */
@@ -207,7 +237,7 @@ void getFields(string query){
     	pos = findNextComma(stmt);
     	tmp = stmt.substr(0, pos);
     	v.push_back(trim(tmp));
-    	stmt = stmt.substr((pos >= 0 ? pos : 0)+1, -1);
+    	stmt = stmt.substr(pos >= 0 ? pos+1 : 0, -1);
 	}
 
 	// Parse fields to extract alias and table
@@ -237,19 +267,26 @@ void getFields(string query){
 			_name = v[i].substr(pPos+1, aliasPos - v[i].find("."));
 			_tableAlias = pPos == -1 ? "" : v[i].substr(0, pPos);
 		}
+		if (_alias.empty())
+			_alias = _name;
 
 		// TO-DO : extract type and lenght from DB
 
 		currField.Name = trim(_name);
 		currField.Alias = trim(_alias);
 		currField.TableAlias = trim(_tableAlias);
-		currField.Table = resolveAssociations(trim(_tableAlias));
+		currField.Table = (trim(_tableAlias).empty()) ? "" : resolveAssociations(trim(_tableAlias));
 		Fields.push_back(currField);
 	}
 
 }
 
 
+/**
+ * Fill the Filters vector with the info in the filter struct data
+ *
+ * @param query String with the SQL query.
+ */
 void getFilters(string query){
 	int start = FindWHERE(query);
 	int end  = FindGROUPBY(query);
@@ -275,18 +312,140 @@ void getFilters(string query){
     	tmp = stmt.substr(0, pos);
     	v.push_back(trim(tmp));
    		stmt = stmt.substr(pos >= 0 ? pos : 0, -1);
-    	cout << trim(tmp) << endl;
 	}
 
 	// Parse filters to extract struct data
 	for (int i = 0; i < v.size(); ++i)
 	{
+		filter currFilter;
 		vector<string> v2;
-		//for (int j = 0; j < Criteria.size() && v2.size() == 0; ++j)
-		//{
-			v2 = split(v[i], "Criteria[0]");
-		//}
-		//cout << v2[0] << "\t" << v2[1] << endl;
+		
+		if (FindPATTERN(v[i], "OR") != -1)
+		{
+			currFilter.ConcatExp = "OR";
+			v[i] = v[i].substr(0, FindPATTERN(v[i], "OR"));
+		}
+		else if (FindPATTERN(v[i], "AND") != -1)
+		{
+			currFilter.ConcatExp = "AND";
+			v[i] = v[i].substr(0, FindPATTERN(v[i], "AND"));
+		}
+
+		// Extract criteria
+		for (int j = 0; j < Criteria.size(); ++j)
+		{
+			v2 = split(v[i], Criteria[j]);
+			if (v2.size() > 1)
+			{
+				currFilter.Criteria = Criteria[i];
+				break;
+			}
+		}
+
+		currFilter.Name = v2[0];
+		currFilter.Value = ((v2.size() > 1) ? v2[1] : "");
+		currFilter.Not = 0;
+		currFilter.Having = 0;
+
+		// extract table
+		for (int k = 0; k < Tables.size(); ++k)
+		{
+			if((int)v2[0].find(Tables[k].first + ".") >= 0 || (!Tables[k].second.empty() && (int)v2[0].find(Tables[k].second + ".") >= 0) )
+			{
+				currFilter.Table = Tables[k].first;
+				currFilter.TableAlias = Tables[k].second;
+			}
+		}
+
+		Filters.push_back(currFilter);
+	}
+	return;
+}
+
+
+/**
+ * Fill the GroupBy vector with the Fields to group by
+ *
+ * @param query String with the SQL query.
+ */
+void getGroupBy(string query){
+	int start  = FindGROUPBY(query);
+	int end  = FindORDERBY(query);
+	string stmt;
+	string tmp;
+	vector<string> v;
+
+	// If there is no GROUP BY then exit
+	if(start == -1)
+		return;
+
+	// Shift start posizion after GROUP BY string
+	start += 9;
+
+	stmt = query.substr(start, (end != -1 ? end : query.size())-start);
+
+	int pos = 0;
+	// Extract goups
+	while(pos >= 0)
+	{
+    	pos = findNextComma(stmt);
+    	tmp = stmt.substr(0, pos);
+    	v.push_back(trim(tmp));
+   		stmt = stmt.substr(pos >= 0 ? pos+1 : 0, -1);
+	}
+
+	// Insert fields into vector
+	for (int i = 0; i < v.size(); ++i)
+		GroupBy.push_back(v[i]);
+
+	return;
+}
+
+
+/**
+ * Fill the OrderBy vector with the Field - Direction pair
+ *
+ * @param query String with the SQL query.
+ */
+void getOrderBy(string query){
+	int start  = FindORDERBY(query);
+	string stmt;
+	string tmp;
+	vector<string> v;
+
+	// If there is no ORDER BY then exit
+	if(start == -1)
+		return;
+
+	// Shift start posizion after ORDER BY string
+	start += 9;
+
+	stmt = query.substr(start, query.size()-start);
+
+	int pos = 0;
+	// Extract sorting
+	while(pos >= 0)
+	{
+    	pos = findNextComma(stmt);
+    	tmp = stmt.substr(0, pos);
+    	v.push_back(trim(tmp));
+   		stmt = stmt.substr(pos >= 0 ? pos+1 : 0, -1);
+	}
+
+	// Parse sorting to extract field and direction
+	for (int i = 0; i < v.size(); ++i)
+	{
+		string field;
+		string direction;
+		
+		int p = v[i].rfind(" ");
+		field = v[i].substr(0, p);
+		direction = (p >= 0) ? v[i].substr(p, -1) : "asc";
+
+		if( isInteger(field) ) 
+			field = Fields[atoi(field.c_str())-1].Alias;
+
+		OrderBy.push_back(pair<string,string>(trim(field), trim(direction)));
 	}
 	return;
 }
